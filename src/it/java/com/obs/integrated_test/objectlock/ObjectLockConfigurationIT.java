@@ -20,7 +20,7 @@ import com.obs.services.model.objectlock.ObjectLockConfiguration;
 import com.obs.services.model.objectlock.ObjectLockRule;
 import com.obs.services.model.objectlock.SetObjectLockConfigurationRequest;
 import com.obs.test.TestTools;
-import com.obs.test.tools.PrepareTestBucket;
+import com.obs.test.tools.PropertiesTools;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -31,17 +31,14 @@ import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Locale;
 
 @RunWith(Parameterized.class)
 public class ObjectLockConfigurationIT {
     @Rule
     public TestName testName = new TestName();
-
-    @Rule
-    public PrepareTestBucket prepareTestBucket = new PrepareTestBucket();
 
     @Parameterized.Parameter()
     public String authTypeName;
@@ -53,7 +50,8 @@ public class ObjectLockConfigurationIT {
     public static Collection<Object[]> authTypeData() {
         return Arrays.asList(new Object[][] {
             {"OBS", AuthTypeEnum.OBS},
-            {"V2", AuthTypeEnum.V2}
+            {"V2", AuthTypeEnum.V2},
+            {"V4", AuthTypeEnum.V4}
         });
     }
 
@@ -61,20 +59,20 @@ public class ObjectLockConfigurationIT {
     private String bucketName;
 
     @Before
-    public void setUp() {
-        if (authType == AuthTypeEnum.OBS) {
-            obsClient = TestTools.getPipelineEnvironment();
-        } else {
-            obsClient = TestTools.getPipelineEnvironment_V2();
-        }
+    public void setUp() throws IOException {
+        obsClient = TestTools.getPipelineEnvironmentByAuthType(authType);
         Assert.assertNotNull("ObsClient should not be null", obsClient);
-        bucketName = testName.getMethodName().replace("_", "-").toLowerCase(Locale.ROOT)
-            .replace("[", "").replace("]", "");
+        bucketName = TestTools.generateBucketName(testName.getMethodName());
+        PropertiesTools props = PropertiesTools.getInstance(TestTools.getPropertiesFile());
+        String location = props.getProperties("environment.location");
+        assertEquals(200, TestTools.createBucket(obsClient, bucketName, location, false).getStatusCode());
     }
 
     @After
     public void tearDown() {
-        // 桶的创建和删除由 PrepareTestBucket @Rule 统一管理
+        if (obsClient != null && bucketName != null) {
+            TestTools.delete_bucket(obsClient, bucketName);
+        }
     }
 
     // SET + GET + 边界值测试

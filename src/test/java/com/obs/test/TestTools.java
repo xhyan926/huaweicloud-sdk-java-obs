@@ -64,6 +64,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.assertTrue;
@@ -386,6 +387,27 @@ public class TestTools {
         }
 
         return null;
+    }
+
+    /**
+     * 根据认证类型获取对应的ObsClient
+     */
+    public static ObsClient getPipelineEnvironmentByAuthType(AuthTypeEnum authType) {
+        switch (authType) {
+            case V2:
+                return getPipelineEnvironment_V2();
+            case V4:
+                return getPipelineEnvironment_V4();
+            default:
+                return getPipelineEnvironment_OBS();
+        }
+    }
+
+    /**
+     * 统一生成桶名：将测试方法名转换为合法的桶名
+     */
+    public static String generateBucketName(String testName) {
+        return testName.replace("_", "-").replace("[", "").replace("]", "").toLowerCase(Locale.ROOT);
     }
 
     /**

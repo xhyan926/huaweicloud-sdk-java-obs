@@ -13,6 +13,7 @@ import com.obs.aitool.AIGenerated;
 import com.obs.services.ObsClient;
 import com.obs.services.exception.ObsException;
 import com.obs.services.model.AuthTypeEnum;
+import com.obs.services.model.BucketTypeEnum;
 import com.obs.services.model.HeaderResponse;
 import com.obs.services.model.dis.DeleteBucketDisPolicyRequest;
 import com.obs.services.model.dis.DisPolicyConfiguration;
@@ -21,7 +22,6 @@ import com.obs.services.model.dis.GetBucketDisPolicyRequest;
 import com.obs.services.model.dis.GetBucketDisPolicyResult;
 import com.obs.services.model.dis.SetBucketDisPolicyRequest;
 import com.obs.test.TestTools;
-import com.obs.test.tools.PrepareTestBucket;
 import com.obs.test.tools.PropertiesTools;
 
 import org.junit.After;
@@ -41,20 +41,27 @@ public class BucketDisPolicyIT {
     @Rule
     public TestName testName = new TestName();
 
-    @Rule
-    public PrepareTestBucket prepareTestBucket = new PrepareTestBucket();
-
     @Parameterized.Parameter()
     public String authTypeName;
 
     @Parameterized.Parameter(1)
     public AuthTypeEnum authType;
 
-    @Parameterized.Parameters(name = "{0}")
-    public static Collection<Object[]> authTypeData() {
+    @Parameterized.Parameter(2)
+    public String bucketTypeName;
+
+    @Parameterized.Parameter(3)
+    public BucketTypeEnum bucketType;
+
+    @Parameterized.Parameters(name = "{0}-{2}")
+    public static Collection<Object[]> testData() {
         return Arrays.asList(new Object[][] {
-            {"OBS", AuthTypeEnum.OBS},
-            {"V2", AuthTypeEnum.V2}
+            {"OBS", AuthTypeEnum.OBS, "OBJECT", BucketTypeEnum.OBJECT},
+            {"OBS", AuthTypeEnum.OBS, "POSIX", BucketTypeEnum.PFS},
+            {"V2", AuthTypeEnum.V2, "OBJECT", BucketTypeEnum.OBJECT},
+            {"V2", AuthTypeEnum.V2, "POSIX", BucketTypeEnum.PFS},
+            {"V4", AuthTypeEnum.V4, "OBJECT", BucketTypeEnum.OBJECT},
+            {"V4", AuthTypeEnum.V4, "POSIX", BucketTypeEnum.PFS}
         });
     }
 
@@ -66,19 +73,17 @@ public class BucketDisPolicyIT {
 
     @Before
     public void setUp() throws IOException {
-        if (authType == AuthTypeEnum.OBS) {
-            obsClient = TestTools.getPipelineEnvironment();
-        } else {
-            obsClient = TestTools.getPipelineEnvironment_V2();
-        }
+        obsClient = TestTools.getPipelineEnvironmentByAuthType(authType);
         Assert.assertNotNull("ObsClient should not be null", obsClient);
-        bucketName = testName.getMethodName().replace("_", "-").toLowerCase(Locale.ROOT)
-            .replace("[", "").replace("]", "");
+        bucketName = TestTools.generateBucketName(testName.getMethodName());
+        boolean isPosix = (bucketType == BucketTypeEnum.PFS);
+        PropertiesTools props = PropertiesTools.getInstance(TestTools.getPropertiesFile());
+        String location = props.getProperties("environment.location");
+        assertEquals(200, TestTools.createBucket(obsClient, bucketName, location, isPosix).getStatusCode());
         try {
-            PropertiesTools propertiesTools = PropertiesTools.getInstance(TestTools.getPropertiesFile());
-            projectId = propertiesTools.getProperties("projectId");
-            agency = propertiesTools.getProperties("agency");
-            stream = propertiesTools.getProperties("stream");
+            projectId = props.getProperties("projectId");
+            agency = props.getProperties("agency");
+            stream = props.getProperties("stream");
         } catch (Exception e) {
             // 配置读取失败时使用占位值
             projectId = "your-project-id";
@@ -89,7 +94,9 @@ public class BucketDisPolicyIT {
 
     @After
     public void tearDown() {
-        // 桶的创建和删除由 PrepareTestBucket @Rule 统一管理
+        if (obsClient != null && bucketName != null) {
+            TestTools.delete_bucket(obsClient, bucketName);
+        }
     }
 
     /**

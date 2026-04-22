@@ -9,14 +9,12 @@ import static org.junit.Assert.assertEquals;
 import com.obs.services.ObsClient;
 import com.obs.services.exception.ObsException;
 import com.obs.services.model.AuthTypeEnum;
+import com.obs.services.model.BaseBucketRequest;
 import com.obs.services.model.BucketVersioningConfiguration;
 import com.obs.services.model.HeaderResponse;
-import com.obs.services.model.ListVersionsRequest;
-import com.obs.services.model.ListVersionsResult;
 import com.obs.services.model.ObjectMetadata;
 import com.obs.services.model.PutObjectRequest;
 import com.obs.services.model.PutObjectResult;
-import com.obs.services.model.VersionOrDeleteMarker;
 import com.obs.services.model.VersioningStatusEnum;
 import com.obs.services.model.objectlock.DefaultRetention;
 import com.obs.services.model.objectlock.ObjectLockConfiguration;
@@ -27,25 +25,22 @@ import com.obs.services.model.objectlock.SetObjectRetentionRequest;
 import com.obs.test.TestTools;
 import com.obs.test.tools.PropertiesTools;
 
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Locale;
 
 @RunWith(Parameterized.class)
 public class ObjectRetentionIT {
-    @Rule
-    public TestName testName = new TestName();
+    private static final String FIXED_BUCKET_NAME =
+        ObjectRetentionIT.class.getSimpleName().toLowerCase(Locale.ROOT);
 
     @Parameterized.Parameter()
     public String authTypeName;
@@ -57,62 +52,24 @@ public class ObjectRetentionIT {
     public static Collection<Object[]> authTypeData() {
         return Arrays.asList(new Object[][] {
             {"OBS", AuthTypeEnum.OBS},
-            {"V2", AuthTypeEnum.V2}
+            {"V2", AuthTypeEnum.V2},
+            {"V4", AuthTypeEnum.V4}
         });
     }
 
     private ObsClient obsClient;
     private String bucketName;
 
-    private static File getConfigFile() {
-        String env = System.getProperty("test.env", "");
-        String fileName = env.isEmpty()
-            ? "test_data.properties"
-            : "test_data_" + env + ".properties";
-        return new File("./app/src/test/resource/" + fileName);
-    }
-
     @Before
-    public void setUp() throws Exception {
-        if (authType == AuthTypeEnum.OBS) {
-            obsClient = TestTools.getPipelineEnvironment();
-        } else {
-            obsClient = TestTools.getPipelineEnvironment_V2();
-        }
+    public void setUp() throws IOException {
+        obsClient = TestTools.getPipelineEnvironmentByAuthType(authType);
         Assert.assertNotNull("ObsClient should not be null", obsClient);
-        bucketName = testName.getMethodName().replace("_", "-").toLowerCase(Locale.ROOT)
-            .replace("[", "").replace("]", "");
+        bucketName = FIXED_BUCKET_NAME;
 
-        String location = PropertiesTools.getInstance(getConfigFile()).getProperties("environment.location");
-        boolean isPosix = Boolean.parseBoolean(
-            PropertiesTools.getInstance(getConfigFile()).getProperties("isPosix"));
-        HeaderResponse createResponse = TestTools.createBucket(obsClient, bucketName, location, isPosix);
-        Assert.assertEquals("Create bucket should succeed", 200, createResponse.getStatusCode());
-    }
-
-    @After
-    public void tearDown() {
-        if (obsClient != null && bucketName != null) {
-            // WORM保护的对象不可删除，清理时需先列举对象再尝试删除
-            // 忽略因WORM保护导致的删除失败
-            try {
-                ListVersionsRequest listRequest = new ListVersionsRequest(bucketName);
-                listRequest.setMaxKeys(1000);
-                ListVersionsResult versionsResult = obsClient.listVersions(listRequest);
-                for (VersionOrDeleteMarker version : versionsResult.getVersions()) {
-                    try {
-                        obsClient.deleteObject(bucketName, version.getObjectKey(), version.getVersionId());
-                    } catch (ObsException ignored) {
-                        // WORM保护的对象删除失败，忽略
-                    }
-                }
-            } catch (ObsException ignored) {
-            }
-            try {
-                obsClient.deleteBucket(bucketName);
-            } catch (ObsException ignored) {
-                // WORM保护的对象仍存在时桶不可删除，忽略
-            }
+        if (!obsClient.headBucket(new BaseBucketRequest(bucketName))) {
+            PropertiesTools props = PropertiesTools.getInstance(TestTools.getPropertiesFile());
+            String location = props.getProperties("environment.location");
+            assertEquals(200, TestTools.createBucket(obsClient, bucketName, location, false).getStatusCode());
         }
     }
 
