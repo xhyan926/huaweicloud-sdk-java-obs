@@ -198,7 +198,7 @@ public class ObjectRetentionIT {
             obsClient.setObjectRetention(setRetentionRequest);
             Assert.fail("Expected ObsException for bucket without WORM enabled");
         } catch (ObsException e) {
-            Assert.assertEquals(400, e.getResponseCode());
+            Assert.assertEquals(409, e.getResponseCode());
         }
 
         // 恢复多版本以便后续用例正常执行
