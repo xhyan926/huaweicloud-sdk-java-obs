@@ -46,6 +46,11 @@
    - 必须使用 `assertTrue(statusCode == 200 || statusCode == 201)` 兼容两种情况
    - 不得使用 `assertEquals(200, statusCode)` 硬编码单一期望值
 
+9. **禁止AI生成的集成测试方法缺少@AIGenerated注解**
+   - 所有AI生成的集成测试方法（`*IT.java` 中的 `@Test` 方法）必须添加 `com.obs.aitool.AIGenerated` 注解
+   - `author` 字段必须使用当前 git 用户名，`date` 字段必须使用当前系统日期（YYYY-MM-DD 格式）
+   - 通用注解规范详见 `ai-code-generation.md` 规则
+
 ## 正向示例
 
 ```java

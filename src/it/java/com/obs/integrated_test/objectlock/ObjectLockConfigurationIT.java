@@ -8,6 +8,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
+import com.obs.aitool.AIGenerated;
 import com.obs.services.ObsClient;
 import com.obs.services.model.AuthTypeEnum;
 import com.obs.services.model.BucketVersioningConfiguration;
@@ -77,6 +78,8 @@ public class ObjectLockConfigurationIT {
 
     // SET + GET + 边界值测试
     @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-23",
+        description = "集成测试：设置桶对象锁配置并查询验证，支持Days和Years模式")
     public void test_SDK_objectlock_001() {
         // 开启多版本
         obsClient.setBucketVersioning(bucketName,
@@ -122,6 +125,8 @@ public class ObjectLockConfigurationIT {
 
     // SET + GET + 清空配置 + 再 GET
     @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-23",
+        description = "集成测试：设置桶对象锁配置后清空规则并验证")
     public void test_SDK_objectlock_002() {
         // 开启多版本
         obsClient.setBucketVersioning(bucketName,

@@ -9,6 +9,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 
+import com.obs.aitool.AIGenerated;
 import com.obs.services.ObsClient;
 import com.obs.services.exception.ObsException;
 import com.obs.services.model.AuthTypeEnum;
@@ -101,6 +102,8 @@ public class BucketCompressPolicyIT {
      * IT-001: 设置配置 → 查询验证 → 覆盖策略更新 → 再查询验证
      */
     @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-23",
+        description = "集成测试：设置桶压缩策略并查询验证，然后更新再验证")
     public void test_SDK_compresspolicy_001() {
         // SET: 配置 overwrite=0（不覆盖跳过）
         CompressPolicyRule rule = new CompressPolicyRule("rule-001",
@@ -159,6 +162,8 @@ public class BucketCompressPolicyIT {
      * IT-002: 设置 → 查询 → 删除 → 再查询(404) → 重复删除(204)
      */
     @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-23",
+        description = "集成测试：验证桶压缩策略完整CRUD生命周期")
     public void test_SDK_compresspolicy_002() {
         // SET
         CompressPolicyRule rule = new CompressPolicyRule("rule-002",
@@ -203,6 +208,8 @@ public class BucketCompressPolicyIT {
      * IT-003: 多规则配置测试
      */
     @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-23",
+        description = "集成测试：验证多规则桶压缩策略配置")
     public void test_SDK_compresspolicy_003() {
         // SET: 配置两条规则
         CompressPolicyRule rule1 = new CompressPolicyRule("rule-multi-001",
@@ -251,6 +258,8 @@ public class BucketCompressPolicyIT {
      * IT-004: 错误场景 — 验证 SDK 能正确返回服务端错误码、错误信息、请求ID、响应头
      */
     @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-23",
+        description = "集成测试：验证桶压缩策略错误场景下的错误信息完整性")
     public void test_SDK_compresspolicy_004() {
         // --- 场景1: SET 使用不存在的委托名，服务端应返回 400 + 错误信息 ---
         CompressPolicyRule rule = new CompressPolicyRule("rule-error-001",

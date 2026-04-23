@@ -165,45 +165,52 @@ public class ObjectRetentionIT {
     }
 
     /**
-     * 验证关闭WORM后设置对象级保护策略时返回错误
+     * 验证未开启WORM的桶设置对象级保护策略时返回错误
+     * 固定桶已开启WORM无法关闭，此用例单独创建临时桶（仅开启版本控制，不开启WORM）进行测试
      */
     @Test
     @AIGenerated(author = "yanliwei", date = "2026-04-23",
-        description = "集成测试：挂起版本控制使WORM失效后验证设置对象级保留策略返回错误")
-    public void test_SDK_objectretention_003() {
-        String objectKey = "retention-no-worm-object";
-
-        // 固定桶可能已被前面的用例开启WORM，先关闭版本控制使WORM失效
-        obsClient.setBucketVersioning(bucketName,
-            new BucketVersioningConfiguration(VersioningStatusEnum.SUSPENDED));
-
-        // 上传对象
-        String content = "test content no worm";
-        PutObjectRequest putRequest = new PutObjectRequest();
-        putRequest.setBucketName(bucketName);
-        putRequest.setObjectKey(objectKey);
-        putRequest.setInput(new ByteArrayInputStream(content.getBytes()));
-        ObjectMetadata metadata = new ObjectMetadata();
-        metadata.setContentLength((long) content.length());
-        putRequest.setMetadata(metadata);
-        obsClient.putObject(putRequest);
-
-        // 在WORM未生效的桶上设置对象级保护策略，应返回错误
-        long retainUntilDate = System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000;
-        ObjectRetention retention = new ObjectRetention("COMPLIANCE", retainUntilDate);
-        SetObjectRetentionRequest setRetentionRequest =
-            new SetObjectRetentionRequest(bucketName, objectKey, retention);
+        description = "集成测试：未开启WORM的桶设置对象级保护策略时返回错误")
+    public void test_SDK_objectretention_003() throws IOException {
+        // 固定桶已开启WORM，此场景需要使用临时桶
+        String tempBucket = TestTools.generateBucketName(
+            "retention-no-worm-" + authTypeName.toLowerCase(Locale.ROOT));
+        PropertiesTools props = PropertiesTools.getInstance(TestTools.getPropertiesFile());
+        String location = props.getProperties("environment.location");
+        assertEquals(200, TestTools.createBucket(obsClient, tempBucket, location, false).getStatusCode());
 
         try {
-            obsClient.setObjectRetention(setRetentionRequest);
-            Assert.fail("Expected ObsException for bucket without WORM enabled");
-        } catch (ObsException e) {
-            Assert.assertEquals(409, e.getResponseCode());
-        }
+            // 开启多版本（但不开启WORM）
+            obsClient.setBucketVersioning(tempBucket,
+                new BucketVersioningConfiguration(VersioningStatusEnum.ENABLED));
 
-        // 恢复多版本以便后续用例正常执行
-        obsClient.setBucketVersioning(bucketName,
-            new BucketVersioningConfiguration(VersioningStatusEnum.ENABLED));
+            // 上传对象
+            String objectKey = "retention-no-worm-object";
+            String content = "test content no worm";
+            PutObjectRequest putRequest = new PutObjectRequest();
+            putRequest.setBucketName(tempBucket);
+            putRequest.setObjectKey(objectKey);
+            putRequest.setInput(new ByteArrayInputStream(content.getBytes()));
+            ObjectMetadata metadata = new ObjectMetadata();
+            metadata.setContentLength((long) content.length());
+            putRequest.setMetadata(metadata);
+            obsClient.putObject(putRequest);
+
+            // 在未开启WORM的桶上设置对象级保护策略，应返回错误
+            long retainUntilDate = System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000;
+            ObjectRetention retention = new ObjectRetention("COMPLIANCE", retainUntilDate);
+            SetObjectRetentionRequest setRetentionRequest =
+                new SetObjectRetentionRequest(tempBucket, objectKey, retention);
+
+            try {
+                obsClient.setObjectRetention(setRetentionRequest);
+                Assert.fail("Expected ObsException for bucket without WORM enabled");
+            } catch (ObsException e) {
+                Assert.assertEquals(400, e.getResponseCode());
+            }
+        } finally {
+            TestTools.delete_bucket(obsClient, tempBucket);
+        }
     }
 
     /**
