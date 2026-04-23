@@ -6,6 +6,7 @@ package com.obs.integrated_test.objectlock;
 
 import static org.junit.Assert.assertEquals;
 
+import com.obs.aitool.AIGenerated;
 import com.obs.services.ObsClient;
 import com.obs.services.exception.ObsException;
 import com.obs.services.model.AuthTypeEnum;
@@ -77,6 +78,8 @@ public class ObjectRetentionIT {
      * 开启桶级WORM、上传对象、设置对象级WORM保护策略并验证
      */
     @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-23",
+        description = "集成测试：开启桶级WORM、上传对象、设置对象级WORM保护策略并验证")
     public void test_SDK_objectretention_001() {
         String objectKey = "retention-test-object";
 
@@ -118,6 +121,8 @@ public class ObjectRetentionIT {
      * 设置对象级WORM保护策略后，验证可以延长保护期限
      */
     @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-23",
+        description = "集成测试：设置对象级WORM保护策略后验证可以延长保护期限")
     public void test_SDK_objectretention_002() {
         String objectKey = "retention-extend-test-object";
 
@@ -160,15 +165,17 @@ public class ObjectRetentionIT {
     }
 
     /**
-     * 验证未开启WORM的桶设置对象级保护策略时返回错误
+     * 验证关闭WORM后设置对象级保护策略时返回错误
      */
     @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-23",
+        description = "集成测试：挂起版本控制使WORM失效后验证设置对象级保留策略返回错误")
     public void test_SDK_objectretention_003() {
         String objectKey = "retention-no-worm-object";
 
-        // 开启多版本（但不开启WORM）
+        // 固定桶可能已被前面的用例开启WORM，先关闭版本控制使WORM失效
         obsClient.setBucketVersioning(bucketName,
-            new BucketVersioningConfiguration(VersioningStatusEnum.ENABLED));
+            new BucketVersioningConfiguration(VersioningStatusEnum.SUSPENDED));
 
         // 上传对象
         String content = "test content no worm";
@@ -181,7 +188,7 @@ public class ObjectRetentionIT {
         putRequest.setMetadata(metadata);
         obsClient.putObject(putRequest);
 
-        // 在未开启WORM的桶上设置对象级保护策略，应返回错误
+        // 在WORM未生效的桶上设置对象级保护策略，应返回错误
         long retainUntilDate = System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000;
         ObjectRetention retention = new ObjectRetention("COMPLIANCE", retainUntilDate);
         SetObjectRetentionRequest setRetentionRequest =
@@ -193,12 +200,18 @@ public class ObjectRetentionIT {
         } catch (ObsException e) {
             Assert.assertEquals(400, e.getResponseCode());
         }
+
+        // 恢复多版本以便后续用例正常执行
+        obsClient.setBucketVersioning(bucketName,
+            new BucketVersioningConfiguration(VersioningStatusEnum.ENABLED));
     }
 
     /**
      * 验证缩短保护期限时返回错误（保护期限仅允许延长，不允许缩短）
      */
     @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-23",
+        description = "集成测试：验证缩短WORM保护期限时返回错误")
     public void test_SDK_objectretention_004() {
         String objectKey = "retention-shorten-object";
 
@@ -250,6 +263,8 @@ public class ObjectRetentionIT {
      * 但受WORM保护的原始版本不可删除
      */
     @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-23",
+        description = "集成测试：验证多版本场景下PUT新版本成功但WORM保护的原始版本不可删除")
     public void test_SDK_objectretention_005() {
         String objectKey = "retention-overwrite-object";
 
@@ -309,6 +324,8 @@ public class ObjectRetentionIT {
      * 验证删除受WORM保护的对象时返回错误
      */
     @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-23",
+        description = "集成测试：验证删除受WORM保护的对象时返回403错误")
     public void test_SDK_objectretention_006() {
         String objectKey = "retention-delete-object";
 
@@ -349,6 +366,40 @@ public class ObjectRetentionIT {
             Assert.fail("Expected ObsException when deleting WORM protected object");
         } catch (ObsException e) {
             Assert.assertEquals(403, e.getResponseCode());
+        }
+    }
+
+    /**
+     * 验证对不存在的对象设置保留策略时返回错误
+     */
+    @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-23",
+        description = "集成测试：验证对不存在的对象设置保留策略时返回错误")
+    public void test_SDK_objectretention_007() {
+        // 开启多版本
+        obsClient.setBucketVersioning(bucketName,
+            new BucketVersioningConfiguration(VersioningStatusEnum.ENABLED));
+
+        // 开启桶级WORM
+        ObjectLockConfiguration lockConfig = new ObjectLockConfiguration("Enabled", null);
+        SetObjectLockConfigurationRequest setLockRequest =
+            new SetObjectLockConfigurationRequest(bucketName, lockConfig);
+        HeaderResponse lockResponse = obsClient.setObjectLockConfiguration(setLockRequest);
+        Assert.assertEquals(200, lockResponse.getStatusCode());
+
+        // 对不存在的对象设置保留策略
+        String nonExistentKey = "non-existent-object-" + System.currentTimeMillis();
+        long retainUntilDate = System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000;
+        ObjectRetention retention = new ObjectRetention("COMPLIANCE", retainUntilDate);
+        SetObjectRetentionRequest setRetentionRequest =
+            new SetObjectRetentionRequest(bucketName, nonExistentKey, retention);
+
+        try {
+            obsClient.setObjectRetention(setRetentionRequest);
+            Assert.fail("Expected ObsException for non-existent object");
+        } catch (ObsException e) {
+            Assert.assertEquals("Expected 404 for non-existent object, got: " + e.getResponseCode(),
+                404, e.getResponseCode());
         }
     }
 }
