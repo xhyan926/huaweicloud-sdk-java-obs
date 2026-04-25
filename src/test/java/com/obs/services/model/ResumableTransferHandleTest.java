@@ -251,4 +251,16 @@ public class ResumableTransferHandleTest {
         handle.cancel();
         assertTrue("should still be cancelled after second cancel()", handle.isCancelled());
     }
+
+    @AIGenerated(author = "yanliwei", date = "2026-04-25",
+            description = "Test ensureCancelHandler auto-creates handler when getCancelHandler called without bind")
+    @Test
+    public void should_auto_create_cancel_handler_when_getCancelHandler_called_without_bind() {
+        ResumableTransferHandle handle = new ResumableTransferHandle();
+        CallCancelHandler handler = handle.getCancelHandler();
+        assertNotNull("getCancelHandler should auto-create handler when never bound", handler);
+        handle.cancel();
+        assertTrue("should be cancelled after cancel()", handle.isCancelled());
+        assertTrue("cancelHandler should be cancelled", handler.isCancelled());
+    }
 }

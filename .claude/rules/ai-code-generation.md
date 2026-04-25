@@ -15,8 +15,9 @@
    - 识别到的问题必须主动解决，不能仅报告问题
 
 3. **测试规范**（通用测试规范详见 `code-quality.md`）
-   - 参数化测试必须按类别分离
-   - 测试方法命名和参数化测试的通用规范遵循 `code-quality.md` 规则 #5
+   - 参数化测试仅用于同一测试逻辑搭配不同输入参数的正交验证，不同测试场景必须拆分为独立 `@Test` 方法
+   - 不得在 `@Test` 方法内使用 `switch(testCategory)` 分发到不同的测试分支
+   - 测试方法命名和参数化测试的通用规范遵循 `code-quality.md` 规则 #5 和 #9
 
 ## 正向示例
 
@@ -30,30 +31,28 @@ void should_login_successfully_when_valid_credentials_provided() {
     // 测试逻辑
 }
 
-// 正确的参数化测试结构
-@RunWith(PowerMockRunner.class)
-@PowerMockRunnerDelegate(Parameterized.class)
-@PrepareForTest({SystemProperties.class})
-public class AsyncTaskServiceTest {
+// 正确的参数化测试结构：同一测试逻辑，不同参数正交验证
+@RunWith(Parameterized.class)
+public class ContentTypeParsingTest {
     @Parameterized.Parameter(0) public String testName;
-    @Parameterized.Parameter(1) public InputType input;
-    @Parameterized.Parameter(2) public ExpectedType expected;
-    @Parameterized.Parameter(3) public String testCategory;
+    @Parameterized.Parameter(1) public String contentType;
+    @Parameterized.Parameter(2) public String expectedParseMode;
 
     @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> testData() {
         return Arrays.asList(new Object[][] {
-            {"BothEnabled", BOTH_ENABLED, expected1, "SWITCH_CONFIG"},
-            {"MethodNotAccessible", 0L, null, "EXCEPTION"}
+            {"JsonWithCharset", "application/json;charset=utf-8", "JSON"},
+            {"JsonPlain", "application/json", "JSON"},
+            {"XmlContentType", "application/xml", "XML"},
+            {"NullContentType", null, "XML"}
         });
     }
 
     @Test
-    public void should_configure_switches_correctly() {
-        if (!"SWITCH_CONFIG".equals(testCategory)) {
-            return;
-        }
-        // 测试逻辑
+    public void should_select_correct_parser_when_content_type_varies() {
+        // 同一断言逻辑，仅 contentType 输入和期望解析模式不同
+        ServiceException ex = new ServiceException("msg", body, contentType);
+        assertEquals(expectedParseMode, ex.getParsedFromJson() ? "JSON" : "XML");
     }
 }
 ```
@@ -67,6 +66,21 @@ public class AsyncTaskServiceTest {
 void test() {  // 命名不规范，应使用 should_X_when_Y 格式
     // 测试逻辑
 }
+
+// 错误：参数化测试用 switch/case 分发不同测试分支
+@Parameterized.Parameter(0) public String testCategory;
+@Test
+public void should_verify_behavior() {
+    switch (testCategory) {
+        case "JSON_CTOR": runJsonTest(); break;
+        case "XML_CTOR": runXmlTest(); break;
+        case "TO_STRING": runToStringTest(); break;
+    }
+}
+// ↑ 每个分支测试完全不同的场景，应拆分为独立的 @Test 方法
+// 如：should_parse_json_fields_when_content_type_is_application_json()
+//     should_parse_xml_fields_when_content_type_is_application_xml()
+//     should_include_all_fields_in_toString_when_all_set()
 ```
 
 ## 强制验证清单

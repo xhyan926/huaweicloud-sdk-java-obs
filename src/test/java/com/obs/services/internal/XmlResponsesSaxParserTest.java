@@ -32,6 +32,7 @@ import org.junit.Test;
 
 import com.obs.services.internal.handler.XmlResponsesSaxParser;
 import com.obs.services.internal.handler.XmlResponsesSaxParser.BucketEncryptionHandler;
+import com.obs.aitool.AIGenerated;
 import com.obs.services.internal.handler.XmlResponsesSaxParser.BucketNotificationConfigurationHandler;
 import com.obs.services.internal.handler.XmlResponsesSaxParser.BucketReplicationConfigurationHandler;
 import com.obs.services.internal.handler.XmlResponsesSaxParser.BucketStorageInfoHandler;
@@ -971,6 +972,107 @@ public class XmlResponsesSaxParserTest extends BaseObjectTest {
             XmlResponsesSaxParser.BucketLoggingHandler.class, true);
 
         assertEquals(TargetSortingTypeEnum.DAY , bucketLoggingHandler.getBucketLoggingStatus().getTargetSorting());
+    }
+
+    // ------------------------------ ObjectLockConfiguration Handler 测试 ------------------------------
+
+    @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-25", description = "测试解析对象锁配置含ObjectLockEnabled和Mode和Days")
+    public void should_parse_object_lock_configuration_with_all_fields() {
+        XmlResponsesSaxParser xmlResponsesSaxParser = new XmlResponsesSaxParser();
+
+        String xml = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
+                .append("<ObjectLockConfiguration xmlns=\"http://obs.cn-north-4.myhuaweicloud.com/doc/2015-06-30/\">")
+                .append("<ObjectLockEnabled>Enabled</ObjectLockEnabled>")
+                .append("<Rule>")
+                .append("<DefaultRetention>")
+                .append("<Mode>GOVERNANCE</Mode>")
+                .append("<Days>30</Days>")
+                .append("</DefaultRetention>")
+                .append("</Rule>")
+                .append("</ObjectLockConfiguration>")
+                .toString();
+
+        InputStream inputStream = new ByteArrayInputStream(xml.getBytes());
+
+        XmlResponsesSaxParser.ObjectLockConfigurationXMLHandler handler =
+                xmlResponsesSaxParser.parse(inputStream, XmlResponsesSaxParser.ObjectLockConfigurationXMLHandler.class, false);
+
+        assertEquals("Enabled", handler.getObjectLockEnabled());
+        assertEquals("GOVERNANCE", handler.getMode());
+        assertEquals("30", handler.getDays());
+        assertNull(handler.getYears());
+    }
+
+    @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-25", description = "测试解析对象锁配置含Years而非Days")
+    public void should_parse_object_lock_configuration_with_years() {
+        XmlResponsesSaxParser xmlResponsesSaxParser = new XmlResponsesSaxParser();
+
+        String xml = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
+                .append("<ObjectLockConfiguration xmlns=\"http://obs.cn-north-4.myhuaweicloud.com/doc/2015-06-30/\">")
+                .append("<ObjectLockEnabled>Enabled</ObjectLockEnabled>")
+                .append("<Rule>")
+                .append("<DefaultRetention>")
+                .append("<Mode>COMPLIANCE</Mode>")
+                .append("<Years>1</Years>")
+                .append("</DefaultRetention>")
+                .append("</Rule>")
+                .append("</ObjectLockConfiguration>")
+                .toString();
+
+        InputStream inputStream = new ByteArrayInputStream(xml.getBytes());
+
+        XmlResponsesSaxParser.ObjectLockConfigurationXMLHandler handler =
+                xmlResponsesSaxParser.parse(inputStream, XmlResponsesSaxParser.ObjectLockConfigurationXMLHandler.class, false);
+
+        assertEquals("Enabled", handler.getObjectLockEnabled());
+        assertEquals("COMPLIANCE", handler.getMode());
+        assertNull(handler.getDays());
+        assertEquals("1", handler.getYears());
+    }
+
+    @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-25", description = "测试解析对象锁配置只有ObjectLockEnabled无Rule")
+    public void should_parse_object_lock_configuration_without_retention() {
+        XmlResponsesSaxParser xmlResponsesSaxParser = new XmlResponsesSaxParser();
+
+        String xml = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
+                .append("<ObjectLockConfiguration xmlns=\"http://obs.cn-north-4.myhuaweicloud.com/doc/2015-06-30/\">")
+                .append("<ObjectLockEnabled>Enabled</ObjectLockEnabled>")
+                .append("</ObjectLockConfiguration>")
+                .toString();
+
+        InputStream inputStream = new ByteArrayInputStream(xml.getBytes());
+
+        XmlResponsesSaxParser.ObjectLockConfigurationXMLHandler handler =
+                xmlResponsesSaxParser.parse(inputStream, XmlResponsesSaxParser.ObjectLockConfigurationXMLHandler.class, false);
+
+        assertEquals("Enabled", handler.getObjectLockEnabled());
+        assertNull(handler.getMode());
+        assertNull(handler.getDays());
+        assertNull(handler.getYears());
+    }
+
+    // ------------------------------ BucketTrashConfiguration Handler 测试 ------------------------------
+
+    @Test
+    @AIGenerated(author = "yanliwei", date = "2026-04-25", description = "测试解析回收站配置含ReservedDays")
+    public void should_parse_bucket_trash_configuration() {
+        XmlResponsesSaxParser xmlResponsesSaxParser = new XmlResponsesSaxParser();
+
+        String xml = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
+                .append("<BucketTrashConfiguration xmlns=\"http://obs.cn-north-4.myhuaweicloud.com/doc/2015-06-30/\">")
+                .append("<ReservedDays>7</ReservedDays>")
+                .append("</BucketTrashConfiguration>")
+                .toString();
+
+        InputStream inputStream = new ByteArrayInputStream(xml.getBytes());
+
+        XmlResponsesSaxParser.BucketTrashConfigurationXMLHandler handler =
+                xmlResponsesSaxParser.parse(inputStream, XmlResponsesSaxParser.BucketTrashConfigurationXMLHandler.class, false);
+
+        assertEquals("7", handler.getReservedDays());
     }
 }
 
