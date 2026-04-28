@@ -39,6 +39,7 @@ mvn verify
 | 开发工作流 | `development-workflow.md` | 开发、构建、测试、提交 |
 | 代码质量 | `code-quality.md` | 编写、修改、审查代码 |
 | AI代码生成 | `ai-code-generation.md` | AI助手生成代码 |
+| 单元测试 | `unit-test.md` | 编写、修改、审查单元测试 |
 | 集成测试 | `integration-test.md` | 编写/调试集成测试或新增 SpecialParamEnum |
 
 ### 技术文档 (.claude/docs/)
@@ -52,6 +53,7 @@ mvn verify
 | Maven插件 | `maven-plugins.md` | Maven插件配置、自定义构建流程 |
 | 依赖管理 | `dependency-management.md` | 依赖问题、添加新依赖 |
 | 开发规范 | `development-standards.md` | 团队规范、代码审查标准 |
+| 测试指导 | `testing-guide.md` | 测试策略、工具使用、测试编写最佳实践 |
 
 ## 项目结构
 
